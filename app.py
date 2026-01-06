@@ -13,6 +13,14 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Logo en el sidebar
+try:
+    st.sidebar.image("logo_jye.jpg", use_container_width=True)
+except:
+    pass  # Si no encuentra el logo, continúa sin error
+
+st.sidebar.markdown("### 🏪 Didácticos J&E")
+
 # ============================================================================
 # PÁGINA PRINCIPAL
 # ============================================================================
