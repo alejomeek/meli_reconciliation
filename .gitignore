@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Environment variables
+.env
+
+# Archivos de datos sensibles
+meli_tokens.json
+*.xls
+*.xlsx
+
+# Archivos de debug
+debug_*.py
+diagnostico_*.py
+verify_*.py
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

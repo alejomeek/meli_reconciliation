@@ -1,0 +1,9 @@
+streamlit
+pandas
+xlrd
+openpyxl
+xlsxwriter
+supabase
+python-dotenv
+pytz
+requests
