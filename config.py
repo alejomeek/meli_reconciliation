@@ -9,18 +9,33 @@ import os
 # ============================================================================
 
 # Intentar cargar desde Streamlit secrets (producción)
+SUPABASE_URL = None
+SUPABASE_KEY = None
+ML_APP_ID = None
+ML_CLIENT_SECRET = None
+ML_REDIRECT_URI = None
+ML_SITE_ID = "MCO"
+
 try:
     import streamlit as st
-    SUPABASE_URL = st.secrets["supabase"]["url"]
-    SUPABASE_KEY = st.secrets["supabase"]["key"]
-    ML_APP_ID = st.secrets["mercadolibre"]["app_id"]
-    ML_CLIENT_SECRET = st.secrets["mercadolibre"]["client_secret"]
-    ML_REDIRECT_URI = st.secrets["mercadolibre"]["redirect_uri"]
-    ML_SITE_ID = st.secrets.get("mercadolibre", {}).get("site_id", "MCO")
-except:
+    # Verificar si estamos en Streamlit Cloud
+    if hasattr(st, 'secrets') and len(st.secrets) > 0:
+        SUPABASE_URL = st.secrets["supabase"]["url"]
+        SUPABASE_KEY = st.secrets["supabase"]["key"]
+        ML_APP_ID = st.secrets["mercadolibre"]["app_id"]
+        ML_CLIENT_SECRET = st.secrets["mercadolibre"]["client_secret"]
+        ML_REDIRECT_URI = st.secrets["mercadolibre"]["redirect_uri"]
+        ML_SITE_ID = st.secrets["mercadolibre"].get("site_id", "MCO")
+    else:
+        # No hay secrets configurados, intentar .env
+        raise KeyError("No secrets found")
+except (ImportError, KeyError, FileNotFoundError):
     # Fallback a variables de entorno (desarrollo local)
-    from dotenv import load_dotenv
-    load_dotenv()
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+    except ImportError:
+        pass
     
     SUPABASE_URL = os.getenv("SUPABASE_URL")
     SUPABASE_KEY = os.getenv("SUPABASE_KEY")
