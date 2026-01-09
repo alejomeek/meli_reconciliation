@@ -13,7 +13,16 @@ import config
 # ============================================================================
 
 def load_ml_token() -> Optional[str]:
-    """Carga el token de ML desde meli_tokens.json"""
+    """Carga el token de ML desde Streamlit Secrets o meli_tokens.json"""
+    # Primero intentar desde Streamlit Secrets (para Streamlit Cloud)
+    try:
+        import streamlit as st
+        if hasattr(st, 'secrets') and 'mercadolibre_token' in st.secrets:
+            return st.secrets['mercadolibre_token']['access_token']
+    except (ImportError, KeyError, FileNotFoundError):
+        pass
+    
+    # Fallback a archivo local (para desarrollo local)
     try:
         with open('meli_tokens.json', 'r') as f:
             token_data = json.load(f)
@@ -23,7 +32,16 @@ def load_ml_token() -> Optional[str]:
 
 
 def get_user_id() -> Optional[int]:
-    """Obtiene el user_id desde el token guardado"""
+    """Obtiene el user_id desde Streamlit Secrets o meli_tokens.json"""
+    # Primero intentar desde Streamlit Secrets (para Streamlit Cloud)
+    try:
+        import streamlit as st
+        if hasattr(st, 'secrets') and 'mercadolibre_token' in st.secrets:
+            return st.secrets['mercadolibre_token']['user_id']
+    except (ImportError, KeyError, FileNotFoundError):
+        pass
+    
+    # Fallback a archivo local (para desarrollo local)
     try:
         with open('meli_tokens.json', 'r') as f:
             token_data = json.load(f)
