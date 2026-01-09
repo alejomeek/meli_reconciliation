@@ -32,7 +32,7 @@ except ValueError as e:
 # ============================================================================
 
 with st.sidebar:
-    st.image("https://img.icons8.com/color/96/000000/mercadolibre.png", width=80)
+    st.image("logo_jye.jpg", width=80)
     st.title("🏪 Didácticos J&E")
     st.markdown("---")
     
