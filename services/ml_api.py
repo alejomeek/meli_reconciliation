@@ -221,33 +221,56 @@ def sync_orders_to_db(
     
     from database.supabase_client import insert_ml_order, check_order_exists
     
-    orders = get_orders(access_token, seller_id, limit=limit)
-    
-    nuevas = 0
-    existentes = 0
-    errores = 0
-    
-    for order in orders:
-        order_id = str(order.get('id'))
+    try:
+        orders = get_orders(access_token, seller_id, limit=limit)
         
-        # Verificar si ya existe
-        if check_order_exists(order_id):
-            existentes += 1
-            continue
+        if not orders:
+            return {
+                'total_procesadas': 0,
+                'nuevas': 0,
+                'existentes': 0,
+                'errores': 0,
+                'mensaje': 'No se encontraron órdenes nuevas'
+            }
         
-        # Transformar y guardar
-        order_data = transform_order_for_db(order)
-        result = insert_ml_order(order_data)
+        nuevas = 0
+        existentes = 0
+        errores = 0
+        error_details = []
         
-        if result.get('success'):
-            nuevas += 1
-        else:
-            errores += 1
-            print(f"Error guardando orden {order_id}: {result.get('error')}")
-    
-    return {
-        'total_procesadas': len(orders),
-        'nuevas': nuevas,
-        'existentes': existentes,
-        'errores': errores
-    }
+        for order in orders:
+            order_id = str(order.get('id'))
+            
+            # Verificar si ya existe
+            if check_order_exists(order_id):
+                existentes += 1
+                continue
+            
+            # Transformar y guardar
+            order_data = transform_order_for_db(order)
+            result = insert_ml_order(order_data)
+            
+            if result.get('success'):
+                nuevas += 1
+            else:
+                errores += 1
+                error_msg = f"Orden {order_id}: {result.get('error', 'Error desconocido')}"
+                error_details.append(error_msg)
+                print(error_msg)
+        
+        return {
+            'total_procesadas': len(orders),
+            'nuevas': nuevas,
+            'existentes': existentes,
+            'errores': errores,
+            'error_details': error_details if error_details else None
+        }
+    except Exception as e:
+        print(f"Error en sync_orders_to_db: {str(e)}")
+        return {
+            'total_procesadas': 0,
+            'nuevas': 0,
+            'existentes': 0,
+            'errores': 1,
+            'error_details': [str(e)]
+        }

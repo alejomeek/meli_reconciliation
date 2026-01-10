@@ -41,24 +41,39 @@ with st.sidebar:
     
     if st.button("📥 Sincronizar Órdenes ML", use_container_width=True):
         with st.spinner("Sincronizando con Mercado Libre..."):
-            access_token = ml_api.load_ml_token()
-            seller_id = ml_api.get_user_id()
-            
-            if not access_token or not seller_id:
-                st.error("❌ No se encontró el token de ML. Ejecuta primero meli_auth_test.py")
-            else:
-                result = ml_api.sync_orders_to_db(access_token, seller_id, limit=50)
+            try:
+                access_token = ml_api.load_ml_token()
+                seller_id = ml_api.get_user_id()
                 
-                st.success(f"✅ Sincronización completada")
-                st.info(f"""
-                📊 **Resultados:**
-                - Nuevas: {result['nuevas']}
-                - Existentes: {result['existentes']}
-                - Errores: {result['errores']}
-                """)
-                
-                # Recargar página para mostrar nuevas órdenes
-                st.rerun()
+                if not access_token:
+                    st.error("❌ No se encontró el access_token de ML.")
+                    st.info("💡 Verifica que hayas configurado 'mercadolibre_token.access_token' en Streamlit Secrets")
+                elif not seller_id:
+                    st.error("❌ No se encontró el seller_id de ML.")
+                    st.info("💡 Verifica que hayas configurado 'mercadolibre_token.user_id' en Streamlit Secrets")
+                else:
+                    # Intentar sincronizar
+                    result = ml_api.sync_orders_to_db(access_token, seller_id, limit=50)
+                    
+                    if result:
+                        st.success(f"✅ Sincronización completada")
+                        st.info(f"""
+                        📊 **Resultados:**
+                        - Total procesadas: {result.get('total_procesadas', 0)}
+                        - Nuevas: {result.get('nuevas', 0)}
+                        - Existentes: {result.get('existentes', 0)}
+                        - Errores: {result.get('errores', 0)}
+                        """)
+                        
+                        # Recargar página para mostrar nuevas órdenes
+                        if result.get('nuevas', 0) > 0:
+                            st.rerun()
+                    else:
+                        st.error("❌ Error en la sincronización. No se obtuvieron resultados.")
+                        
+            except Exception as e:
+                st.error(f"❌ Error inesperado: {str(e)}")
+                st.exception(e)
     
     st.markdown("---")
     
