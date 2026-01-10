@@ -13,8 +13,17 @@ import config
 # ============================================================================
 
 def load_ml_token() -> Optional[str]:
-    """Carga el token de ML desde Streamlit Secrets o meli_tokens.json"""
-    # Primero intentar desde Streamlit Secrets (para Streamlit Cloud)
+    """Carga el token de ML desde Supabase, Streamlit Secrets o archivo local"""
+    # 1. Primero intentar desde Supabase (fuente principal en producción)
+    try:
+        from services.ml_token_manager import load_ml_token_from_supabase
+        token_data = load_ml_token_from_supabase()
+        if token_data and token_data.get('access_token'):
+            return token_data['access_token']
+    except Exception:
+        pass
+    
+    # 2. Intentar desde Streamlit Secrets (fallback para Streamlit Cloud)
     try:
         import streamlit as st
         if hasattr(st, 'secrets') and 'mercadolibre_token' in st.secrets:
@@ -22,7 +31,7 @@ def load_ml_token() -> Optional[str]:
     except (ImportError, KeyError, FileNotFoundError):
         pass
     
-    # Fallback a archivo local (para desarrollo local)
+    # 3. Fallback a archivo local (para desarrollo local)
     try:
         with open('meli_tokens.json', 'r') as f:
             token_data = json.load(f)
@@ -32,8 +41,17 @@ def load_ml_token() -> Optional[str]:
 
 
 def get_user_id() -> Optional[int]:
-    """Obtiene el user_id desde Streamlit Secrets o meli_tokens.json"""
-    # Primero intentar desde Streamlit Secrets (para Streamlit Cloud)
+    """Obtiene el user_id desde Supabase, Streamlit Secrets o archivo local"""
+    # 1. Primero intentar desde Supabase
+    try:
+        from services.ml_token_manager import load_ml_token_from_supabase
+        token_data = load_ml_token_from_supabase()
+        if token_data and token_data.get('user_id'):
+            return token_data['user_id']
+    except Exception:
+        pass
+    
+    # 2. Intentar desde Streamlit Secrets
     try:
         import streamlit as st
         if hasattr(st, 'secrets') and 'mercadolibre_token' in st.secrets:
@@ -41,7 +59,7 @@ def get_user_id() -> Optional[int]:
     except (ImportError, KeyError, FileNotFoundError):
         pass
     
-    # Fallback a archivo local (para desarrollo local)
+    # 3. Fallback a archivo local
     try:
         with open('meli_tokens.json', 'r') as f:
             token_data = json.load(f)
@@ -53,8 +71,29 @@ def get_user_id() -> Optional[int]:
 def refresh_access_token() -> Optional[str]:
     """
     Refresca el access token usando el refresh token
+    Intenta primero con Supabase, luego con archivo local
     Retorna el nuevo access token o None si falla
     """
+    # Intentar refrescar desde Supabase primero
+    try:
+        from services.ml_token_manager import refresh_ml_token_in_supabase
+        new_token = refresh_ml_token_in_supabase()
+        if new_token:
+            # También actualizar archivo local si existe
+            try:
+                with open('meli_tokens.json', 'r') as f:
+                    local_data = json.load(f)
+                local_data['access_token'] = new_token
+                local_data['updated_at'] = datetime.now().isoformat()
+                with open('meli_tokens.json', 'w') as f:
+                    json.dump(local_data, f, indent=2)
+            except:
+                pass
+            return new_token
+    except Exception as e:
+        print(f"No se pudo refrescar desde Supabase: {e}")
+    
+    # Fallback: refrescar desde archivo local
     try:
         # Cargar el refresh token
         with open('meli_tokens.json', 'r') as f:
@@ -62,7 +101,7 @@ def refresh_access_token() -> Optional[str]:
             refresh_token = token_data.get('refresh_token')
         
         if not refresh_token:
-            print("❌ No se encontró refresh_token en meli_tokens.json")
+            print("❌ No se encontró refresh_token")
             return None
         
         # Hacer request para refrescar el token
@@ -90,6 +129,13 @@ def refresh_access_token() -> Optional[str]:
         
         with open('meli_tokens.json', 'w') as f:
             json.dump(token_data, f, indent=2)
+        
+        # Intentar guardar también en Supabase
+        try:
+            from services.ml_token_manager import save_ml_token_to_supabase
+            save_ml_token_to_supabase(token_data)
+        except:
+            pass
         
         print("✅ Token refrescado exitosamente")
         return new_token_data['access_token']
