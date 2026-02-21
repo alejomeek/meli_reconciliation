@@ -165,8 +165,8 @@ for pack_id, pack_ordenes in packs.items():
     # Determinar si es un pack real o una orden individual
     is_real_pack = not pack_id.startswith("SINGLE_")
     
-    # Calcular totales del pack
-    total_pack = sum(orden['total'] for orden in pack_ordenes)
+    # Calcular totales del pack (orden['total'] puede ser None si fue creada desde el OMS)
+    total_pack = sum((orden['total'] or 0) for orden in pack_ordenes)
     
     # Obtener todos los productos del pack
     todos_productos = []
