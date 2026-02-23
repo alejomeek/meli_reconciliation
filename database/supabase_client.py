@@ -5,17 +5,67 @@ Cliente de Supabase para interactuar con la base de datos
 from supabase import create_client, Client
 from typing import Optional, List, Dict, Any
 from datetime import datetime
+import json
 import config
 
 # ============================================================================
-# CLIENTE SUPABASE
+# CLIENTES SUPABASE
 # ============================================================================
 
 def get_supabase_client() -> Client:
-    """Obtiene el cliente de Supabase"""
+    """Obtiene el cliente de Supabase de meli_reconciliation (discrepancias, tbc_facturas)"""
     return create_client(config.SUPABASE_URL, config.SUPABASE_KEY)
 
 supabase: Client = get_supabase_client()
+
+# Cliente OMS (fuente de verdad de órdenes ML)
+_oms_client: Optional[Client] = None
+
+def _get_oms_client() -> Client:
+    """Obtiene (o crea) el cliente Supabase del OMS de forma lazy."""
+    global _oms_client
+    if _oms_client is None:
+        if not config.OMS_SUPABASE_URL or not config.OMS_SUPABASE_KEY:
+            raise ValueError(
+                "OMS_SUPABASE_URL y OMS_SUPABASE_KEY deben estar configurados "
+                "para acceder a las órdenes de Mercado Libre."
+            )
+        _oms_client = create_client(config.OMS_SUPABASE_URL, config.OMS_SUPABASE_KEY)
+    return _oms_client
+
+
+def _map_oms_order(row: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Convierte una fila de `orders` del OMS al formato que espera
+    el motor de reconciliación (mismo esquema que ml_orders).
+    """
+    customer = row.get('customer') or {}
+    shipping = row.get('shipping_address') or {}
+    items = row.get('items') or []
+
+    productos = [
+        {
+            'sku': item.get('sku', ''),
+            'title': item.get('title', ''),
+            'quantity': item.get('quantity', 0),
+            'unit_price': item.get('unitPrice', 0),
+        }
+        for item in items
+    ]
+
+    return {
+        'order_id': row.get('order_id'),
+        'pack_id': row.get('pack_id'),
+        'shipping_id': row.get('shipping_id'),
+        'fecha_orden': row.get('order_date'),
+        'total': row.get('total_amount', 0),
+        'productos': json.dumps(productos),
+        'buyer_name': shipping.get('receiverName'),
+        'buyer_nickname': customer.get('nickname'),
+        'remision': row.get('remision_tbc'),
+        'fecha_remision': row.get('fecha_remision_tbc'),
+        'usuario': None,
+    }
 
 # ============================================================================
 # FUNCIONES PARA ML_ORDERS
@@ -50,28 +100,33 @@ def get_ml_orders(
     con_remision: Optional[bool] = None,
     limit: int = 50
 ) -> List[Dict[str, Any]]:
-    """Obtiene órdenes de ML con filtros opcionales"""
+    """
+    Obtiene órdenes ML desde el OMS (fuente de verdad).
+    Devuelve los datos mapeados al formato histórico de ml_orders para
+    mantener compatibilidad con el motor de reconciliación.
+    """
     try:
-        query = supabase.table("ml_orders").select("*")
-        
+        oms = _get_oms_client()
+        query = oms.table("orders").select("*").eq("channel", "mercadolibre")
+
         if fecha_desde:
-            query = query.gte("fecha_orden", fecha_desde)
-        
+            query = query.gte("order_date", fecha_desde)
+
         if fecha_hasta:
-            query = query.lte("fecha_orden", fecha_hasta)
-        
+            query = query.lte("order_date", fecha_hasta)
+
         if con_remision is True:
-            query = query.not_.is_("remision", "null")
+            query = query.not_.is_("remision_tbc", "null")
         elif con_remision is False:
-            query = query.is_("remision", "null")
-        
-        query = query.order("fecha_orden", desc=True).limit(limit)
-        
+            query = query.is_("remision_tbc", "null")
+
+        query = query.order("order_date", desc=True).limit(limit)
+
         response = query.execute()
-        return response.data
-        
+        return [_map_oms_order(row) for row in (response.data or [])]
+
     except Exception as e:
-        print(f"Error obteniendo órdenes: {e}")
+        print(f"Error obteniendo órdenes desde OMS: {e}")
         return []
 
 
