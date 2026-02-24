@@ -107,7 +107,7 @@ def get_ml_orders(
     """
     try:
         oms = _get_oms_client()
-        query = oms.table("orders").select("*").eq("channel", "mercadolibre")
+        query = oms.table("orders").select("*").eq("channel", "mercadolibre").neq("status", "cancelado")
 
         if fecha_desde:
             query = query.gte("order_date", fecha_desde)
