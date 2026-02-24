@@ -123,7 +123,14 @@ def get_ml_orders(
         query = query.order("order_date", desc=True).limit(limit)
 
         response = query.execute()
-        return [_map_oms_order(row) for row in (response.data or [])]
+
+        # Excluir pedidos de Medellín (no hacen parte del control TBC-Flex)
+        def _es_medellin(row: Dict[str, Any]) -> bool:
+            city = ((row.get('shipping_address') or {}).get('city') or '').lower().strip()
+            return 'medell' in city
+
+        data_filtrada = [row for row in (response.data or []) if not _es_medellin(row)]
+        return [_map_oms_order(row) for row in data_filtrada]
 
     except Exception as e:
         print(f"Error obteniendo órdenes desde OMS: {e}")

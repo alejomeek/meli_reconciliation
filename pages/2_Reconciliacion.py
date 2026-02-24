@@ -111,9 +111,9 @@ else:
     st.stop()
 
 with st.spinner("Obteniendo órdenes de ML..."):
-    # Obtener todas las órdenes con remisión
+    # Obtener todas las órdenes con remisión desde el 01 de enero de 2026
     ordenes_ml_todas = db.get_ml_orders(
-        fecha_desde=None,
+        fecha_desde="2026-01-01",
         fecha_hasta=None,
         con_remision=True,  # Solo las que tienen remisión
         limit=10000  # Límite alto para obtener todas las órdenes
@@ -135,8 +135,9 @@ st.success(f"✅ Se encontraron {len(ordenes_ml)} órdenes con fecha de remisió
 
 # También obtener órdenes SIN remisión para detectar pedidos antiguos sin facturar
 with st.spinner("Obteniendo pedidos sin facturar..."):
+    # Limitar solo a pedidos de 2026 en adelante
     ordenes_sin_remision = db.get_ml_orders(
-        fecha_desde=None,
+        fecha_desde="2026-01-01",
         fecha_hasta=None,
         con_remision=False,  # Solo las que NO tienen remisión
         limit=10000  # Límite alto para obtener todas las órdenes
