@@ -107,7 +107,13 @@ def get_ml_orders(
     """
     try:
         oms = _get_oms_client()
-        query = oms.table("orders").select("*").eq("channel", "mercadolibre").neq("status", "cancelado")
+        query = (
+            oms.table("orders")
+            .select("*")
+            .eq("channel", "mercadolibre")
+            .neq("status", "cancelado")
+            .not_.ilike("store_name", "%medell%")  # Excluir bodega Medellín
+        )
 
         if fecha_desde:
             query = query.gte("order_date", fecha_desde)
@@ -123,14 +129,7 @@ def get_ml_orders(
         query = query.order("order_date", desc=True).limit(limit)
 
         response = query.execute()
-
-        # Excluir pedidos de Medellín (no hacen parte del control TBC-Flex)
-        def _es_medellin(row: Dict[str, Any]) -> bool:
-            city = ((row.get('shipping_address') or {}).get('city') or '').lower().strip()
-            return 'medell' in city
-
-        data_filtrada = [row for row in (response.data or []) if not _es_medellin(row)]
-        return [_map_oms_order(row) for row in data_filtrada]
+        return [_map_oms_order(row) for row in (response.data or [])]
 
     except Exception as e:
         print(f"Error obteniendo órdenes desde OMS: {e}")
