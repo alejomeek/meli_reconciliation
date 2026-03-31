@@ -30,8 +30,8 @@ st.markdown("---")
 st.subheader("📁 Paso 1: Cargar Archivo TBC")
 
 uploaded_file = st.file_uploader(
-    "Selecciona el archivo RESUXDOC.XLS",
-    type=['xls', 'XLS'],
+    "Selecciona el archivo RESUXDOC.XLS o RESUXDOC.XLSX",
+    type=['xls', 'XLS', 'xlsx', 'XLSX'],
     help="Archivo exportado desde TBC con las remisiones de Mercado Libre Flex (Evento S66)"
 )
 

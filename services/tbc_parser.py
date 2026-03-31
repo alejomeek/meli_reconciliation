@@ -39,8 +39,8 @@ def parse_resuxdoc_xls(file_path: str, evento_filtro: str = "S66") -> List[Dict[
     facturas = []
     
     try:
-        # Leer archivo Excel con pandas
-        df = pd.read_excel(file_path, sheet_name=0, header=None, engine='xlrd')
+        # Leer archivo Excel con pandas (el engine se infiere automáticamente openpyxl o xlrd)
+        df = pd.read_excel(file_path, sheet_name=0, header=None)
         
         print(f"[INFO] Archivo leido: {len(df)} filas, {len(df.columns)} columnas")
         
